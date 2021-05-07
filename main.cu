@@ -4,6 +4,7 @@
 #include <iostream>
 #include<time.h>
 #include "vec3.h"
+#include "ray.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -23,27 +24,68 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
     }
 }
 
-__global__ void render(color* fb, int max_x, int max_y) {
+__device__ float hit_sphere(const point3& center, float radius, const ray& r) {
+    vec3 oc = r.origin() - center;
+    float a = r.direction().length_squared();
+    float half_b =  dot(oc, r.direction());
+    float c = oc.length_squared() - radius * radius;
+    float discriminant = half_b * half_b - a * c;
+    if (discriminant > 0) {
+        return (-half_b - sqrtf(discriminant)) /  a;
+    }
+    else {
+        return -1.0f;
+    }
+}
+
+__device__ color ray_color(const ray& r) {
+    float t = hit_sphere(point3(0, 0, -1.0f), 0.5f, r);
+    if (t > 0.0f) {
+        vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1));
+        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
+    }
+    vec3 unit_direction = unit_vector(r.direction());
+    t = 0.5f * (unit_direction.y() + 1.0f);
+    return (1.0f - t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
+}
+
+__global__ void render(vec3* fb, int max_x, int max_y, point3 lower_left_corner, vec3 horizontal, vec3 vertical, point3 origin) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j * max_x + i;
-    fb[pixel_index] = color(float(i) / max_x, float(j) / max_y, 0.2f);
+    float u = float(i) / float(max_x);
+    float v = float(j) / float(max_y);
+    ray r(origin, lower_left_corner + u * horizontal + v * vertical);
+    fb[pixel_index] = ray_color(r);
 }
 
 int main() {
-    int image_width = 1200;
-    int image_height = 600;
+    //Image
+    const float aspect_ratio = 16.0f / 9.0f;
+    const int image_width = 1200;
+    const int image_height = static_cast<int>(image_width / aspect_ratio);
     int tx = 8;
     int ty = 8;
 
     std::cerr << "Rendering a " << image_width << "x" << image_height << " image ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
 
-    int num_pixels = image_width * image_height;
-    size_t fb_size = num_pixels * sizeof(color);
+    //Camera
+    float viewport_height = 2.0f;
+    float viewport_width = aspect_ratio * viewport_height;
+    float focal_length = 1.0f;
+
+    point3 origin = point3(0, 0, 0);
+    vec3 horizontal = vec3(viewport_width, 0, 0);
+    vec3 vertical = vec3(0, viewport_height, 0);
+    point3 lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
+
+    //Render
 
     // allocate FB
+    int num_pixels = image_width * image_height;
+    size_t fb_size = num_pixels * sizeof(color);
     color* fb;
     checkCudaErrors(cudaMallocManaged((void**)&fb, fb_size));
 
@@ -52,7 +94,7 @@ int main() {
     // Render our buffer
     dim3 blocks(image_width / tx + 1, image_height / ty + 1);
     dim3 threads(tx, ty);
-    render << <blocks, threads >> > (fb, image_width, image_height);
+    render << <blocks, threads >> > (fb, image_width, image_height, lower_left_corner, horizontal, vertical, origin);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cuda_stop = clock();
