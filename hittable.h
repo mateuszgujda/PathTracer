@@ -4,9 +4,12 @@
 #include "ray.h"
 #include "cuda_runtime.h"
 
+class material;
+
 struct hit_record {
     point3 p;
     vec3 normal;
+    material* material;
     float t;
     bool front_face;
 

@@ -33,6 +33,13 @@ class Vec3 {
             return *this;
         };
 
+        __host__ __device__ inline Vec3& Vec3::operator*=(const Vec3& v) {
+            e[0] *= v.e[0];
+            e[1] *= v.e[1];
+            e[2] *= v.e[2];
+            return *this;
+        }
+
         __host__ __device__ inline Vec3& operator/=(const float t) {
             return *this *= 1 / t;
         };
@@ -44,6 +51,12 @@ class Vec3 {
         __host__ __device__ inline float length_squared() const {
             return e[0] * e[0] + e[1] * e[1] + e[2] * e[2];
         };
+
+        __host__ __device__ bool near_zero() const {
+            // Return true if the vector is close to zero in all dimensions.
+            const float s = 1e-8f;
+            return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
+        }
 
 	public:
 		float e[3] = { 0.0f, 0.0f, 0.0f };
@@ -101,4 +114,9 @@ __host__ __device__ inline vec3 cross(const vec3& u, const vec3& v) {
 __host__ __device__ inline vec3 unit_vector(vec3 v) {
     return v / v.length();
 }
+
+__host__ __device__ inline vec3 reflect(const vec3& vector_on_surface, const vec3& normal) {
+    return vector_on_surface - 2 * dot(vector_on_surface, normal) * normal;
+}
+
 #endif
