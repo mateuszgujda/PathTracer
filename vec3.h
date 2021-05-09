@@ -58,6 +58,8 @@ class Vec3 {
             return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
         }
 
+
+
 	public:
 		float e[3] = { 0.0f, 0.0f, 0.0f };
 
@@ -117,6 +119,13 @@ __host__ __device__ inline vec3 unit_vector(vec3 v) {
 
 __host__ __device__ inline vec3 reflect(const vec3& vector_on_surface, const vec3& normal) {
     return vector_on_surface - 2 * dot(vector_on_surface, normal) * normal;
+}
+
+__host__ __device__ inline vec3 refract(const vec3& uv, const vec3& n, float etai_over_etat) {
+    float cos_theta = fmin(dot(-uv, n), 1.0f);
+    vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    vec3 r_out_parallel = -sqrtf(fabs(1.0 - r_out_perp.length_squared())) * n;
+    return r_out_perp + r_out_parallel;
 }
 
 #endif

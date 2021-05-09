@@ -47,4 +47,33 @@ public:
     float fuzz;
 };
 
+class dielectric : public material {
+public:
+    __device__ dielectric(float index_of_refraction) : ir(index_of_refraction) {}
+
+    __device__ virtual bool scatter(
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, curandState* local_rand_state
+    ) const override {
+        attenuation = color(1.0f, 1.0f, 1.0f);
+        float refraction_ratio = rec.front_face ? (1.0f / ir) : ir;
+        vec3 unit_direction = unit_vector(r_in.direction());
+        float cos_theta = fmin(dot(-unit_direction, rec.normal), 1.0f);
+        float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
+        bool cannot_refract = refraction_ratio * sin_theta > 1.0f;
+        vec3 direction;
+
+        if (cannot_refract || reflectance_schlik_approximation(cos_theta, refraction_ratio) > curand_uniform(local_rand_state))
+            direction = reflect(unit_direction, rec.normal);
+        else
+            direction = refract(unit_direction, rec.normal, refraction_ratio);
+
+        scattered = ray(rec.p, direction);
+        return true;
+    }
+
+public:
+    float ir; // Index of Refraction
+};
+
 #endif // !MATERIAL_H

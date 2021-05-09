@@ -62,19 +62,32 @@ __device__ color ray_color(const ray& r, const hittable** world, curandState* lo
     return color(0.0f, 0.0f, 0.0f);
 }
 
-__global__ void create_world(hittable** d_list, hittable** d_world, camera** d_camera) {
+__global__ void create_world(hittable** d_list, hittable** d_world, camera** d_camera, float aspect_ratio) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-        d_list[0] = new sphere(vec3(0.0f, 0.0f, -1.0f), 0.5f, new lambertian(vec3(0.8f, 0.3f, 0.3f)));
+        d_list[0] = new sphere(vec3(0.0f, 0.0f, -1.0f), 0.5f, new lambertian(vec3(0.1f, 0.2f, 0.5f)));
         d_list[1] = new sphere(vec3(0.0f, -100.5f, -1.0f), 100.0f, new lambertian(vec3(0.8f, 0.8f, 0.0f)));
         d_list[2] = new sphere(vec3(1.0f, 0.0f, -1.0f), 0.5f, new metal(vec3(0.8f, 0.6f, 0.2f), 1.0f));
-        d_list[3] = new sphere(vec3(-1.0f, 0.0f, -1.0f), 0.5f, new metal(vec3(0.8f, 0.8f, 0.8f), 0.3f));
-        *d_world = new hittable_list(d_list, 4);
-        *d_camera = new camera();
+        d_list[3] = new sphere(vec3(-1.0f, 0.0f, -1.0f), 0.5f, new dielectric(1.5f));
+        d_list[4] = new sphere(vec3(-1.0f, 0.0f, -1.0f), -0.4f, new dielectric(1.5f));
+        *d_world = new hittable_list(d_list, 5);
+        vec3 lookfrom(3.0f, 3.0f, 2.0f);
+        vec3 lookat(0.0f, 0.0f, -1.0f);
+        float dist_to_focus = (lookfrom - lookat).length();
+        float aperture = 2.0f;
+        *d_camera = new camera(lookfrom,
+            lookat,
+            vec3(0.0f, 1.0f, 0.0f),
+            20.0f,
+            aspect_ratio,
+            aperture,
+            dist_to_focus);
     }
 }
 
 __global__ void free_world(hittable** d_list, hittable** d_world, camera** d_camera) {
-    for (int i = 0; i < 4; i++) {
+    hittable_list* list = (hittable_list*)d_world;
+
+    for (int i = 0; i < list->list_size; i++) {
         delete ((sphere*)d_list[i])->material_ptr;
         delete d_list[i];
     }
@@ -111,7 +124,7 @@ int main() {
     int tx = 8;
     int ty = 8;
     int samples_per_pixel = 100;
-    int num_of_spheres = 4;
+    int num_of_spheres = 5;
 
     std::cerr << "Rendering a " << image_width << "x" << image_height << " image ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
@@ -138,7 +151,7 @@ int main() {
     checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hittable*)));
     camera** d_camera;
     checkCudaErrors(cudaMalloc((void**)&d_camera, sizeof(camera*)));
-    create_world<<< 1, 1 >>>(d_list, d_world, d_camera);
+    create_world<<< 1, 1 >>>(d_list, d_world, d_camera, aspect_ratio);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
