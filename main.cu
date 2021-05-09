@@ -1,13 +1,11 @@
-﻿#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
+﻿
+#include "commons.h"
 #include <iostream>
 #include<time.h>
-#include "vec3.h"
-#include "ray.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
+#include "sphere.h"
+#include "hittable_list.h"
 #define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -24,32 +22,31 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
     }
 }
 
-__device__ float hit_sphere(const point3& center, float radius, const ray& r) {
-    vec3 oc = r.origin() - center;
-    float a = r.direction().length_squared();
-    float half_b =  dot(oc, r.direction());
-    float c = oc.length_squared() - radius * radius;
-    float discriminant = half_b * half_b - a * c;
-    if (discriminant > 0) {
-        return (-half_b - sqrtf(discriminant)) /  a;
-    }
-    else {
-        return -1.0f;
-    }
-}
-
-__device__ color ray_color(const ray& r) {
-    float t = hit_sphere(point3(0, 0, -1.0f), 0.5f, r);
-    if (t > 0.0f) {
-        vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1));
-        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
+__device__ color ray_color(const ray& r, const hittable** world) {
+    hit_record hit;
+    if ((*world)->hit(r, 0, INFINITY, hit)) {
+        return 0.5 * (hit.normal + color(1, 1, 1));
     }
     vec3 unit_direction = unit_vector(r.direction());
-    t = 0.5f * (unit_direction.y() + 1.0f);
+    float t = 0.5f * (unit_direction.y() + 1.0f);
     return (1.0f - t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
 }
 
-__global__ void render(vec3* fb, int max_x, int max_y, point3 lower_left_corner, vec3 horizontal, vec3 vertical, point3 origin) {
+__global__ void create_world(hittable** d_list, hittable** d_world) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *(d_list) = new sphere(vec3(0, 0, -1), 0.5);
+        *(d_list + 1) = new sphere(vec3(0, -100.5, -1), 100);
+        *d_world = new hittable_list(d_list, 2);
+    }
+}
+
+__global__ void free_world(hittable** d_list, hittable** d_world) {
+    delete* (d_list);
+    delete* (d_list + 1);
+    delete* d_world;
+}
+
+__global__ void render(vec3* fb, int max_x, int max_y, point3 lower_left_corner, vec3 horizontal, vec3 vertical, point3 origin, hittable** world) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
@@ -57,7 +54,7 @@ __global__ void render(vec3* fb, int max_x, int max_y, point3 lower_left_corner,
     float u = float(i) / float(max_x);
     float v = float(j) / float(max_y);
     ray r(origin, lower_left_corner + u * horizontal + v * vertical);
-    fb[pixel_index] = ray_color(r);
+    fb[pixel_index] = ray_color(r, world);
 }
 
 int main() {
@@ -83,18 +80,29 @@ int main() {
 
     //Render
 
-    // allocate FB
+    // allocate Memory for list of objects
+    hittable** d_list;
+    checkCudaErrors(cudaMalloc((void**)&d_list, 2 * sizeof(hittable*)));
+    hittable** d_world;
+    checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hittable*)));
+    create_world<<< 1, 1 >>>(d_list, d_world);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    // allocate memory for pixels
     int num_pixels = image_width * image_height;
     size_t fb_size = num_pixels * sizeof(color);
     color* fb;
     checkCudaErrors(cudaMallocManaged((void**)&fb, fb_size));
 
+
+    //Start clock
     clock_t start, cuda_stop, stop;
     start = clock();
     // Render our buffer
     dim3 blocks(image_width / tx + 1, image_height / ty + 1);
     dim3 threads(tx, ty);
-    render << <blocks, threads >> > (fb, image_width, image_height, lower_left_corner, horizontal, vertical, origin);
+    render << <blocks, threads >> > (fb, image_width, image_height, lower_left_corner, horizontal, vertical, origin, d_world);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cuda_stop = clock();
@@ -122,7 +130,14 @@ int main() {
     timer_seconds = ((double)(stop - cuda_stop)) / CLOCKS_PER_SEC;
     std::cerr << "Image write took " << timer_seconds << " seconds. \n";
  
+    //Freeing memory
+    checkCudaErrors(cudaDeviceSynchronize());
+    free_world << <1, 1 >> > (d_list, d_world);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaFree(d_list));
+    checkCudaErrors(cudaFree(d_world));
     checkCudaErrors(cudaFree(fb));
 
-
+    cudaDeviceReset();
+    return 0;
 }
