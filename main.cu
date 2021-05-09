@@ -106,7 +106,7 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, ca
     for (int k = 0; k < samples_per_pixel; k++) {
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
-        ray r = (*camera)->get_ray(u, v);
+        ray r = (*camera)->get_ray(u, v, &local_rand_state);
         col += ray_color(r, world, &local_rand_state);
     }
     col /= float(samples_per_pixel);
