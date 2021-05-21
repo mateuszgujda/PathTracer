@@ -3,6 +3,7 @@
 
 #include "ray.h"
 #include "cuda_runtime.h"
+#include "commons.h"
 
 class material;
 
@@ -22,6 +23,18 @@ struct hit_record {
 class hittable {
 public:
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const = 0;
+
+    __host__ virtual void create_hittable_on_gpu() = 0;
+    __host__ __device__ ~hittable() {
+        #if !defined(__CUDA_ARCH__)
+            if (d_this != NULL) {
+                checkCudaErrors(cudaFree(d_this));
+            }
+        #endif
+    }
+public:
+    material* material_ptr;
+    hittable** d_this = NULL;
 };
 
 #endif

@@ -34,6 +34,4 @@ __device__ vec3 random_in_unit_disk(curandState* local_rand_state) {
     } while (p.length_squared() >= 1.0f);
     return p;
 }
-
-
 #endif // !CUDA_FUNCTIONS_H
