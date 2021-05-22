@@ -26,40 +26,6 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     curand_init(1984+ pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-//__device__ color ray_color(const ray& r, const color& background, const hittable** world, curandState* local_rand_state) {
-//    vec3 cur_attenuation = vec3(1.0f, 1.0f, 1.0f);
-//    ray cur_ray = r;
-//    bool any_hit = false;
-//    for (int i = 0; i < 10; i++) {
-//        hit_record hit;
-//        if ((*world)->hit(cur_ray, 0.001f, INFINITY, hit)) {
-//            any_hit = true;
-//            ray scattered;
-//            vec3 attenuation;
-//            color emitted = hit.material->emitted(hit.p);
-//            if (hit.material->scatter(cur_ray, hit, attenuation, scattered, local_rand_state)) {
-//                cur_attenuation =  emitted + cur_attenuation * attenuation;
-//                cur_ray = scattered;
-//            }
-//            else {
-//                return cur_attenuation * emitted;
-//            }
-//        }
-//        else {
-//            if(any_hit) {
-//                return cur_attenuation;
-//            }
-//            return cur_attenuation * background;
-//        }
-//    }
-//    if (any_hit) {
-//        return cur_attenuation;
-//    }
-//    // exceeded recursion value
-//    return background;
-//}
-
-
 __device__ color ray_color(const ray& r, const color& background, const hittable** world, curandState* local_rand_state,  int depth) {
     hit_record rec;
 
@@ -80,6 +46,7 @@ __device__ color ray_color(const ray& r, const color& background, const hittable
 
     return emitted + attenuation * ray_color(scattered, background, world, local_rand_state, depth - 1);
 }
+
 
 __global__ void free_world(hittable** d_list, hittable** d_world, camera** d_camera) {
     hittable_list* list = (hittable_list*)d_world;
