@@ -26,31 +26,59 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     curand_init(1984+ pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__device__ color ray_color(const ray& r, const hittable** world, curandState* local_rand_state) {
-    vec3 cur_attenuation = vec3(1.0f, 1.0f, 1.0f);
-    ray cur_ray = r;
-    for (int i = 0; i < 25; i++) {
-        hit_record hit;
-        if ((*world)->hit(cur_ray, 0.001f, INFINITY, hit)) {
-            ray scattered;
-            vec3 attenuation;
-            if (hit.material->scatter(cur_ray, hit, attenuation, scattered, local_rand_state)) {
-                cur_attenuation *= attenuation;
-                cur_ray = scattered;
-            }
-            else {
-                return vec3(0.0, 0.0, 0.0);
-            }
-        }
-        else {
-            vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f * (unit_direction.y() + 1.0f);
-            vec3 c = (1.0f - t) * color(1.0f, 1.0f, 1.0f) + t * color(0.5f, 0.7f, 1.0f);
-            return cur_attenuation * c;
-        }
-    }
-    // exceeded recursion value
-    return color(0.0f, 0.0f, 0.0f);
+//__device__ color ray_color(const ray& r, const color& background, const hittable** world, curandState* local_rand_state) {
+//    vec3 cur_attenuation = vec3(1.0f, 1.0f, 1.0f);
+//    ray cur_ray = r;
+//    bool any_hit = false;
+//    for (int i = 0; i < 10; i++) {
+//        hit_record hit;
+//        if ((*world)->hit(cur_ray, 0.001f, INFINITY, hit)) {
+//            any_hit = true;
+//            ray scattered;
+//            vec3 attenuation;
+//            color emitted = hit.material->emitted(hit.p);
+//            if (hit.material->scatter(cur_ray, hit, attenuation, scattered, local_rand_state)) {
+//                cur_attenuation =  emitted + cur_attenuation * attenuation;
+//                cur_ray = scattered;
+//            }
+//            else {
+//                return cur_attenuation * emitted;
+//            }
+//        }
+//        else {
+//            if(any_hit) {
+//                return cur_attenuation;
+//            }
+//            return cur_attenuation * background;
+//        }
+//    }
+//    if (any_hit) {
+//        return cur_attenuation;
+//    }
+//    // exceeded recursion value
+//    return background;
+//}
+
+
+__device__ color ray_color(const ray& r, const color& background, const hittable** world, curandState* local_rand_state,  int depth) {
+    hit_record rec;
+
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+        return color(0, 0, 0);
+
+    // If the ray hits nothing, return the background color.
+    if (!(*world)->hit(r, 0.001f, INFINITY, rec))
+        return background;
+
+    ray scattered;
+    color attenuation;
+    color emitted = rec.material->emitted(rec.p);
+
+    if (!rec.material->scatter(r, rec, attenuation, scattered, local_rand_state))
+        return emitted;
+
+    return emitted + attenuation * ray_color(scattered, background, world, local_rand_state, depth - 1);
 }
 
 __global__ void free_world(hittable** d_list, hittable** d_world, camera** d_camera) {
@@ -68,7 +96,7 @@ __global__ void free_world(hittable** d_list, hittable** d_world, camera** d_cam
 
 
 
-__global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, camera** camera, hittable** world, curandState* rand_state) {
+__global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, color background, camera** camera, hittable** world, curandState* rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -81,7 +109,7 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, ca
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
         ray r = (*camera)->get_ray(u, v, &local_rand_state);
-        col += ray_color(r, world, &local_rand_state);
+        col += ray_color(r, background, world, &local_rand_state, 5);
     }
     col /= float(samples_per_pixel);
     col[0] = sqrt(col[0]);
@@ -176,7 +204,7 @@ int main() {
 
 
 
-    scene* sc = new scene(aspect_ratio);
+    scene* sc = new scene();
     //Start clock
     clock_t start, cuda_stop, stop;
     start = clock();
@@ -186,7 +214,7 @@ int main() {
     render_init << <blocks, threads >> > (image_width, image_height, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    render << <blocks, threads >> > (fb, image_width, image_height, samples_per_pixel, sc->cam->d_this, sc->world->d_this, d_rand_state);
+    render << <blocks, threads >> > (fb, image_width, image_height, samples_per_pixel,sc->background_color, sc->cam->d_this, sc->world->d_this, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cuda_stop = clock();

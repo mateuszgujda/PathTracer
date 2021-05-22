@@ -4,6 +4,7 @@
 #include "ray.h"
 #include "cuda_runtime.h"
 #include "commons.h"
+#include "aabb.h"
 
 class material;
 
@@ -23,6 +24,7 @@ struct hit_record {
 class hittable {
 public:
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const = 0;
+    __device__ virtual bool bounding_box(float time0, float time1, aabb& output_box) const = 0;
 
     __host__ virtual void create_hittable_on_gpu() = 0;
     __host__ __device__ ~hittable() {

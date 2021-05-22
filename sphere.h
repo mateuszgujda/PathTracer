@@ -20,6 +20,7 @@ public:
     }
 
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
+    __device__ virtual bool bounding_box(float t0, float t1, aabb& box) const override;
 
 public:
     point3 center;
@@ -52,6 +53,17 @@ __device__ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& 
    
     return true;
 }
+
+
+__forceinline__ __device__ bool sphere::bounding_box(float t0, float t1, aabb& box) const {
+
+    box = aabb(center - vec3(radius, radius, radius),
+        center + vec3(radius, radius, radius));
+    return true;
+}
+
+
+
 
 __global__ void sphere_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float radius) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {

@@ -8,13 +8,17 @@ class material;
 __global__ void lambertian_gpu(material** mat_ptr, color albedo);
 __global__ void metal_gpu(material** mat_ptr, color albedo, float fuzz);
 __global__ void dielectric_gpu(material** mat_ptr, float ior);
-
+__global__ void diffuse_light_gpu(material** mat_ptr, color albedo);
 
 class material {
     public :
     __device__ virtual bool scatter(
         const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, curandState* local_rand_state
     ) const = 0;
+
+    __device__ virtual color emitted(const point3& p) const {
+        return color(0.0f, 0.0f, 0.0f);
+    }
 
     __host__ virtual void create_material_on_gpu() = 0;
 
@@ -112,6 +116,29 @@ public:
     float ir; // Index of Refraction
 };
 
+class diffuse_light : public material {
+public:
+    __host__ __device__ diffuse_light(color c) : emit(c) {}
+
+    __device__ virtual bool scatter(
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, curandState* local_rand_state
+    ) const override {
+        return false;
+    }
+
+    __device__ virtual color emitted(const point3& p) const override {
+        return emit;
+    }
+
+    __host__ virtual void create_material_on_gpu() override {
+        checkCudaErrors(cudaMalloc(&d_this, sizeof(dielectric*)));
+        diffuse_light_gpu << <1, 1 >> > (d_this, emit);
+    }
+
+public:
+    color emit;
+};
+
 __global__ void lambertian_gpu(material** mat_ptr, color albedo) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *mat_ptr = new lambertian(albedo);
@@ -131,6 +158,11 @@ __global__ void dielectric_gpu(material** mat_ptr, float ior) {
     }
 }
 
+__global__ void diffuse_light_gpu(material** mat_ptr, color albedo) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *mat_ptr = new diffuse_light(albedo);
+    }
+}
 
 
 #endif // !MATERIAL_H
