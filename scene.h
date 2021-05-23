@@ -2,10 +2,12 @@
 #include "hittable_list.h";
 #include "material.h";
 #include "sphere.h";
-#include "camera.h";
-#include "xy_rect.h";
+#include "camera.h"
+#include "aarect.h";
 #include "commons.h";
 #include <vector>;
+#include "cylinder.h";
+#include "cone.h";
 
 class scene {
 public:
@@ -44,6 +46,64 @@ public:
         auto dist_to_focus = 10.0;
         auto aperture = 0.1;
         cam = new camera(lookfrom, lookat, vec3(0,1,0), vfov, 16.0f / 9.0f, aperture, dist_to_focus);
+        cam->create_camera_on_gpu();
+
+        cudaDeviceSynchronize();
+    }
+
+    scene(int value) {
+        auto red = new lambertian(color(.65f, .05f, .05f));
+        red->create_material_on_gpu();
+        auto wall1 = new yz_rect(0, 555, 0, 555, 0, red);
+        hitables.push_back(wall1);
+
+        auto white = new lambertian(color(.73f, .73f, .73f));
+        white->create_material_on_gpu();
+        auto ceiling = new xz_rect(0, 555, 0, 555, 0, white);
+        hitables.push_back(ceiling);
+        auto white2 = new lambertian(color(.73f, .73f, .73f));
+        white2->create_material_on_gpu();
+        auto ceiling2 = new xz_rect(0, 555, 0, 555, 555, white2);
+        hitables.push_back(ceiling2);
+        auto white3 = new lambertian(color(.73f, .73f, .73f));
+        white3->create_material_on_gpu();
+        auto ceiling3 = new xy_rect(0, 555, 0, 555, 555, white3);
+        hitables.push_back(ceiling3);
+
+        auto green2 = new lambertian(color(.12f, .45f, .15f));
+        green2->create_material_on_gpu();
+        cone* cylinder = new cone(point3(348, 0, 200), 400, 64, green2);
+        hitables.push_back(cylinder);
+
+        
+        auto green = new lambertian(color(.12f, .45f, .15f));
+        green->create_material_on_gpu();
+        auto wall2 = new yz_rect(0, 555, 0, 555, 555, green);
+        hitables.push_back(wall2);
+
+        auto light = new diffuse_light(color(15, 15, 15));
+        light->create_material_on_gpu();
+        auto wall3 = new xz_rect(213, 343, 227, 332, 554, light);
+        hitables.push_back(wall3);
+
+        cudaDeviceSynchronize();
+        hittable** list = new hittable * [hitables.size()];
+        for (int i = 0; i < hitables.size(); i++) {
+            list[i] = hitables[i];
+            list[i]->create_hittable_on_gpu();
+        }
+        cudaDeviceSynchronize();
+        world = new hittable_list(list, hitables.size());
+        world->create_hittable_on_gpu();
+        world->copy_list_to_gpu();
+
+        background_color = color(0, 0, 0);
+        point3 lookfrom = point3(278, 278, -800);
+        point3 lookat = point3(278, 278, 0);
+        float vfov = 40.0f;
+        auto dist_to_focus = 10.0;
+        auto aperture = 0.1;
+        cam = new camera(lookfrom, lookat, vec3(0, 1, 0), vfov, 1.0f, aperture, dist_to_focus);
         cam->create_camera_on_gpu();
 
         cudaDeviceSynchronize();

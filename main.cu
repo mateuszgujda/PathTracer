@@ -87,8 +87,9 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, co
 
 int main() {
     //Image
-    const float aspect_ratio = 16.0f / 9.0f;
-    const int image_width = 1200;
+   // const float aspect_ratio = 16.0f / 9.0f;
+    const float aspect_ratio = 1;
+    const int image_width = 600;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
     int tx = 8;
     int ty = 8;
@@ -113,65 +114,8 @@ int main() {
     curandState* d_rand_state;
     checkCudaErrors(cudaMalloc((void**)&d_rand_state, num_pixels * sizeof(curandState)));
 
-    //allocate Memory for list of objects
-    //hittable** d_list;
-    //checkCudaErrors(cudaMalloc((void**)&d_list, num_of_spheres * sizeof(hittable*)));
 
-    //Create Materials
-    //material** materials = new material*[num_of_spheres];
-    //materials[0] = new lambertian(vec3(0.1f, 0.2f, 0.5f));
-    //materials[0]->create_material_on_gpu();
-    //materials[1] = new lambertian(vec3(0.8f, 0.8f, 0.0f));
-    //materials[1]->create_material_on_gpu();
-    //materials[2] = new metal(vec3(0.8f, 0.6f, 0.2f), 1.0f);
-    //materials[2]->create_material_on_gpu();
-    //materials[3] = new dielectric(1.5f);
-    //materials[3]->create_material_on_gpu();
-    //materials[4] = new dielectric(1.5f);
-    //materials[4]->create_material_on_gpu();
-
-    //checkCudaErrors(cudaGetLastError());
-    //checkCudaErrors(cudaDeviceSynchronize());
-    //hittable** hitables = new hittable * [num_of_spheres];
-
-
-    //hitables[0] = new sphere(vec3(0.0f, 0.0f, -1.0f), 0.5f, materials[0]);
-    //hitables[0]->create_hittable_on_gpu();
-    //hitables[1] = new sphere(vec3(0.0f, -100.5f, -1.0f), 100.0f, materials[1]);
-    //hitables[1]->create_hittable_on_gpu();
-    //hitables[2] = new sphere(vec3(1.0f, 0.0f, -1.0f), 0.5f, materials[2]);
-    //hitables[2]->create_hittable_on_gpu();
-    //hitables[3] = new sphere(vec3(-1.0f, 0.0f, -1.0f), 0.5f, materials[3]);
-    //hitables[3]->create_hittable_on_gpu();
-    //hitables[4] = new sphere(vec3(-1.0f, 0.0f, -1.0f), -0.4f, materials[4]);
-    //hitables[4]->create_hittable_on_gpu();
-
-    //checkCudaErrors(cudaGetLastError());
-    //checkCudaErrors(cudaDeviceSynchronize());
-
-    //hittable_list* world = new hittable_list(hitables, num_of_spheres);
-    //world->create_hittable_on_gpu();
-    //world->copy_list_to_gpu();
-
-    //point3 lookfrom(13, 2, 3);
-    //point3 lookat(0, 0, 0);
-    //float dist_to_focus = 10.0f;
-    //float aperture = 0.005f;
-    //camera* cam = new camera(lookfrom,
-    //    lookat,
-    //    vec3(0.0f, 1.0f, 0.0f),
-    //    20.0f,
-    //    aspect_ratio,
-    //    aperture,
-    //    dist_to_focus);
-    //cam->create_camera_on_gpu();
-
-    //checkCudaErrors(cudaGetLastError());
-    //checkCudaErrors(cudaDeviceSynchronize());
-
-
-
-    scene* sc = new scene();
+    scene* sc = new scene(2);
     //Start clock
     clock_t start, cuda_stop, stop;
     start = clock();
