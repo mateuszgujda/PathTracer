@@ -5,6 +5,7 @@
 
 __global__ void hittable_list_gpu(hittable** d_world, hittable** d_list, int list_size);
 __global__ void copy_hittable_to_list_gpu(hittable** d_obj, hittable** d_list, int index);
+__global__ void free_hittable_list_gpu(hittable** d_list);
 
 class hittable_list : public hittable {
 	public :
@@ -33,6 +34,7 @@ class hittable_list : public hittable {
 		__host__ __device__ ~hittable_list(){
 			#if !defined(__CUDA_ARCH__)
 				if (d_list != NULL) {
+					free_hittable_list_gpu << <1, 1 >> > (d_list);
 					checkCudaErrors(cudaFree(d_list));
 				}
 			#endif
@@ -90,6 +92,12 @@ __global__ void hittable_list_gpu(hittable** d_world, hittable** d_list, int lis
 __global__ void copy_hittable_to_list_gpu(hittable** d_list, hittable** d_obj, int index) {
 	if (threadIdx.x == 0 && blockIdx.x == 0) {
 		d_list[index] = *d_obj;
+	}
+}
+
+__global__ void free_hittable_list_gpu(hittable** d_list) {
+	if (threadIdx.x == 0 && blockIdx.x == 0) {
+		delete* d_list;
 	}
 }
 

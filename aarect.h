@@ -2,7 +2,7 @@
 #define AARECT_H
 
 #include "commons.h"
-
+#include <fstream>
 #include "hittable.h"
 
 __global__ void xy_rect_gpu(hittable** d_this, material** mat_ptr, float x0, float x1, float y0, float y1, float k);
@@ -33,6 +33,43 @@ public:
         xy_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, x0, x1, y0, y1, k);
     }
 
+    __host__ static xy_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
+        std::string line;
+        std::streampos temp_pos;
+        float x0 = 0;
+        float x1 = 1;
+        float y0 = 0;
+        float y1 = 1;
+        float k = 0.2f;
+        int material_index = 0;
+        do {
+            std::vector<std::string> maps;
+            temp_pos = file.tellg();
+            std::getline(file, line);
+            maps = get_key_value(line);
+            if (maps[0] == "x0") {
+                x0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "x1") {
+                x1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "y0") {
+                y0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "y1") {
+                y1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "k") {
+                k = std::stof(maps[1]);
+            }
+            else if (maps[0] == "material") {
+                material_index = std::stoi(maps[1]);
+            }
+        } while (!isupper(line[0]));
+        file.seekg(temp_pos);
+
+        return new xy_rect(x0, x1, y0, y1, k, materials[material_index]);
+    }
 
 
 public:
@@ -61,6 +98,44 @@ public:
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(xz_rect*)));
         xz_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, x0, x1, z0, z1, k);
+    }
+
+    __host__ static xz_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
+        std::string line;
+        std::streampos temp_pos;
+        float x0 = 0;
+        float x1 = 1;
+        float z0 = 0;
+        float z1 = 1;
+        float k = 0.2f;
+        int material_index = 0;
+        do {
+            std::vector<std::string> maps;
+            temp_pos = file.tellg();
+            std::getline(file, line);
+            maps = get_key_value(line);
+            if (maps[0] == "x0") {
+                x0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "x1") {
+                x1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "z0") {
+                z0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "z1") {
+                z1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "k") {
+                k = std::stof(maps[1]);
+            }
+            else if (maps[0] == "material") {
+                material_index = std::stoi(maps[1]);
+            }
+        } while (!isupper(line[0]));
+        file.seekg(temp_pos);
+
+        return new xz_rect(x0, x1, z0, z1, k, materials[material_index]);
     }
 
 
@@ -93,7 +168,43 @@ public:
         yz_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, y0, y1, z0, z1, k);
     }
 
+    __host__ static yz_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
+        std::string line;
+        std::streampos temp_pos;
+        float y0 = 0;
+        float y1 = 1;
+        float z0 = 0;
+        float z1 = 1;
+        float k = 0.2f;
+        int material_index = 0;
+        do {
+            std::vector<std::string> maps;
+            temp_pos = file.tellg();
+            std::getline(file, line);
+            maps = get_key_value(line);
+            if (maps[0] == "y0") {
+                y0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "y1") {
+                y1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "z0") {
+                z0 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "z1") {
+                z1 = std::stof(maps[1]);
+            }
+            else if (maps[0] == "k") {
+                k = std::stof(maps[1]);
+            }
+            else if (maps[0] == "material") {
+                material_index = std::stoi(maps[1]);
+            }
+        } while (!isupper(line[0]));
+        file.seekg(temp_pos);
 
+        return new yz_rect(y0, y1, z0, z1, k, materials[material_index]);
+    }
 
 public:
     float y0, y1, z0, z1, k;

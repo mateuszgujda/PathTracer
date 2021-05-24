@@ -4,10 +4,15 @@
 #include "commons.h"
 
 class camera; 
+__global__ void free_camera_gpu(camera** d_camera);
 __global__ void camera_gpu(camera** d_camera, vec3 w, vec3 u, vec3 v, point3 origin, vec3 horizontal, vec3 vertical, point3 lower_lef_corner, float lens_radius);
 
 class camera {
 public:
+
+    __device__ __host__ camera() {
+
+    }
     __device__ __host__ camera(
         point3 lookfrom,
         point3 lookat,
@@ -55,6 +60,7 @@ public:
     __host__ __device__ ~camera() {
         #if !defined(__CUDA_ARCH__)
             if (d_this != NULL) {
+                free_camera_gpu << <1, 1 >> > (d_this);
                 checkCudaErrors(cudaFree(d_this));
             }
         #endif
@@ -72,6 +78,12 @@ public:
 __global__ void camera_gpu(camera** d_camera, vec3 w, vec3 u, vec3 v, point3 origin, vec3 horizontal, vec3 vertical, point3 lower_lef_corner, float lens_radius) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *d_camera = new camera(w, u, v, origin, horizontal, vertical, lower_lef_corner, lens_radius);
+    }
+}
+
+__global__ void free_camera_gpu(camera** d_camera) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        delete* d_camera;
     }
 }
 

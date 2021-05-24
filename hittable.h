@@ -7,7 +7,7 @@
 #include "aabb.h"
 
 class material;
-
+class hittable;
 struct hit_record {
     point3 p;
     vec3 normal;
@@ -20,6 +20,8 @@ struct hit_record {
         normal = front_face ? outward_normal : -outward_normal;
     }
 };
+
+__global__ void free_hittable_gpu(hittable** d_this);
 
 class hittable {
 public:
@@ -38,5 +40,11 @@ public:
     material* material_ptr;
     hittable** d_this = NULL;
 };
+
+__global__ void free_hittable_gpu(hittable** d_this) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        delete* d_this;
+    }
+}
 
 #endif

@@ -72,9 +72,8 @@ public:
 
         auto green2 = new lambertian(color(.12f, .45f, .15f));
         green2->create_material_on_gpu();
-        cone* cylinder = new cone(point3(348, 0, 200), 400, 64, green2);
+        cylinder2* cylinder = new cylinder2(point3(348, 0, 200),  200, 64, green2);
         hitables.push_back(cylinder);
-
         
         auto green = new lambertian(color(.12f, .45f, .15f));
         green->create_material_on_gpu();
@@ -201,16 +200,140 @@ public:
         background_color = color(0.0f, 0.0f, 0.0f);
     }
 
-    scene(char* fileName) {
+    scene(std::ifstream& file, float aspect_ratio) {
+        std::string line;
+        loadOptions(file, line);
+        loadCamera(file, line, aspect_ratio);
+        loadMaterials(file, line);
+        loadObjects(file, line);
 
+        for (int i = 0; i < materials.size(); i++) {
+            materials[i]->create_material_on_gpu();
+        }
+        cudaDeviceSynchronize();
+
+        hittable** list = new hittable * [hitables.size()];
+        for (int i = 0; i < hitables.size(); i++) {
+            list[i] = hitables[i];
+            list[i]->create_hittable_on_gpu();
+        }
+        cudaDeviceSynchronize();
+        world = new hittable_list(list, hitables.size());
+        world->create_hittable_on_gpu();
+        world->copy_list_to_gpu();
+        cam->create_camera_on_gpu();
+        cudaDeviceSynchronize();
+    }
+
+    void loadCamera(std::ifstream& file, std::string& line, float aspect_ratio) {
+        point3 lookfrom;
+        point3 lookat;
+        vec3 vup = vec3(0, 1, 0);
+        float vfov = 20;
+        float dist_to_focus = 10;
+        float aperture = 0.1f;
+
+        do {
+            std::getline(file, line);
+            std::vector<std::string> maps;
+            maps = get_key_value(line);
+            if (maps[0] == "lookfrom") {
+                lookfrom.load_from_string(maps[1]);
+            }
+            else if (maps[0] == "lookat") {
+                lookat.load_from_string(maps[1]);
+            }
+            else if (maps[0] == "vfov") {
+                vfov = std::stof(maps[1]);
+            }
+            else if (maps[0] == "distance_to_focus") {
+                dist_to_focus = std::stof(maps[1]);
+            }
+            else if (maps[0] == "aperture") {
+                aperture = std::stof(maps[1]);
+            }
+            else if (maps[0] == "vup") {
+                vup.load_from_string(maps[1]);
+            }
+
+        } while (line != "Materials");
+        cam = new camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
+    }
+
+    void loadOptions(std::ifstream& file, std::string& line) {
+        do {
+            std::getline(file, line);
+            std::vector<std::string> maps;
+            maps = get_key_value(line);
+            if (maps[0] == "background_color") {
+                color bc;
+                bc.load_from_string(maps[1]);
+                background_color = bc;
+            }
+          
+        } while (line != "Camera");
+    }
+
+    void loadMaterials(std::ifstream& file, std::string& line) {
+        do {
+            std::getline(file, line);
+            if (line == "Lambertian") {
+                lambertian* mat = lambertian::load_from_file(file);
+                materials.push_back(mat);
+            }
+            else if (line == "Dielectric") {
+                dielectric* mat = dielectric::load_from_file(file);
+                materials.push_back(mat);
+            }
+            else if (line == "Metal") {
+                metal* mat = metal::load_from_file(file);
+                materials.push_back(mat);
+            }
+            else if (line == "Diffuse_light") {
+                diffuse_light* mat = diffuse_light::load_from_file(file);
+                materials.push_back(mat);
+            }
+
+        } while (line != "Objects");
+    }
+
+    void loadObjects(std::ifstream& file, std::string& line) {
+        do {
+            std::getline(file, line);
+            if (line == "Sphere") {
+                sphere* obj = sphere::init_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+            else if (line == "Cylinder") {
+                cylinder2* obj = cylinder2::init_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+            else if (line == "Cone") {
+                cone* obj = cone::init_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+            else if (line == "Xy_rect") {
+                xy_rect* obj = xy_rect::load_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+            else if (line == "Xz_rect") {
+                xz_rect* obj = xz_rect::load_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+            else if (line == "Yz_rect") {
+                yz_rect* obj = yz_rect::load_from_file(file, materials);
+                hitables.push_back(obj);
+            }
+
+        } while (line != "END");
     }
 
     ~scene() {
         for (int i = 0; i < world->list_size; i++) {
-            if (hitables[i]->material_ptr != NULL) {
-                delete hitables[i]->material_ptr;
-            }
             delete hitables[i];
+        }
+        for (int i = 0; i < materials.size(); i++) {
+            delete materials[i];
         }
         delete world->list;
         delete world;
@@ -224,6 +347,7 @@ public:
 
     public :
         std::vector<hittable*> hitables;
+        std::vector<material*> materials;
         hittable_list* world;
         color background_color; 
         camera* cam;

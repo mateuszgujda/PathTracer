@@ -13,6 +13,7 @@
 #define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include <fstream>
 
 #define TBP 512;
 
@@ -48,19 +49,6 @@ __device__ color ray_color(const ray& r, const color& background, const hittable
 }
 
 
-__global__ void free_world(hittable** d_list, hittable** d_world, camera** d_camera) {
-    hittable_list* list = (hittable_list*)d_world;
-
-    for (int i = 0; i < list->list_size; i++) {
-        if (d_list[i]->material_ptr != NULL) {
-            delete d_list[i]->material_ptr;
-        }
-        delete d_list[i];
-    }
-    delete* d_world;
-    delete* d_camera;
-}
-
 
 
 __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, color background, camera** camera, hittable** world, curandState* rand_state) {
@@ -88,13 +76,54 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, co
 int main() {
     //Image
    // const float aspect_ratio = 16.0f / 9.0f;
-    const float aspect_ratio = 1;
-    const int image_width = 600;
-    const int image_height = static_cast<int>(image_width / aspect_ratio);
+    std::ifstream file;
+    file.open("scene.txt");
+    float aspect_ratio = 1;
+    int image_width = 600;
+    int image_height = static_cast<int>(image_width / aspect_ratio);
     int tx = 8;
     int ty = 8;
+    scene* sc;
     int samples_per_pixel = 80;
-    int num_of_spheres = 5;
+    if (!file.is_open()) {
+        sc = new scene(2);
+    }
+    else {
+        std::string line;
+        do {
+            std::getline(file, line);
+            if (line == "Image") {
+                continue;
+            }
+            else {
+                std::vector<std::string> maps;
+                maps = get_key_value(line);
+                if (maps[0] == "width") {
+                    image_width = std::stoi(maps[1]);
+                }
+                else if (maps[0] == "height") {
+                    image_height = std::stoi(maps[1]);
+                }
+                else if (maps[0] == "square_side") {
+                    int square_side = std::stoi(maps[1]);
+                    tx = square_side;
+                    ty = square_side;
+                }
+                else if (maps[0] == "samples_per_pixel") {
+                    samples_per_pixel = std::stoi(maps[1]);
+                }
+            }
+        } while (line != "Scene" && line != "END");
+        aspect_ratio = (float) image_width / (float) image_height;
+        if (line == "Scene") {
+            sc = new scene(file, aspect_ratio);
+        }
+        else {
+            std::perror("Wrong file format");
+            return -1;
+        }
+    }
+
 
     std::cerr << "Rendering a " << image_width << "x" << image_height << " image ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
@@ -113,9 +142,6 @@ int main() {
     //Cuda Randomizer
     curandState* d_rand_state;
     checkCudaErrors(cudaMalloc((void**)&d_rand_state, num_pixels * sizeof(curandState)));
-
-
-    scene* sc = new scene(2);
     //Start clock
     clock_t start, cuda_stop, stop;
     start = clock();
@@ -154,8 +180,6 @@ int main() {
     std::cerr << "Image write took " << timer_seconds << " seconds. \n";
  
     //Freeing memory
-    checkCudaErrors(cudaDeviceSynchronize());
-    free_world << <1, 1 >> > (sc->world->d_list, sc->world->d_this, sc->cam->d_this);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaFree(d_rand_state));
     checkCudaErrors(cudaFree(fb));

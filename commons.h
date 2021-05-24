@@ -3,21 +3,21 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <math.h>
-#include <limits>
+#include <vector>
+#include <string>
 #include <iostream>
-
 // Constants
 
 #define INFINITY FLT_MAX
 const float pi = 3.1415926535897932385;
+
+
 
 // Utility Functions
 
 inline float degrees_to_radians(float degrees) {
     return degrees * pi / 180.0f;
 }
-
 
 inline float random_float() {
     // Returns a random real in [0,1).
@@ -35,9 +35,9 @@ inline float clamp(float x, float min, float max) {
     return x;
 }
 
+
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
     if (result) {
         std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
@@ -50,8 +50,12 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 
 // Common Headers
 
+#include "str_fun.h"
 #include "hittable.h"
 #include "ray.h"
 #include "vec3.h"
+
+
+
 
 #endif

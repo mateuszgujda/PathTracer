@@ -9,7 +9,7 @@ __global__ void sphere_gpu(hittable** obj_ptr, material** mat_ptr, point3 center
 
 class sphere : public hittable {
 public:
-    __device__ sphere() {}
+    __device__ __host__ sphere() {}
     __device__ __host__ sphere(point3 cen, float r, material* m) : center(cen), radius(r) {
         this->material_ptr = m;
     };
@@ -21,6 +21,32 @@ public:
 
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
     __device__ virtual bool bounding_box(float t0, float t1, aabb& box) const override;
+
+    __host__ static sphere* init_from_file(std::ifstream& is, std::vector<material*>& materials) {
+        std::string line;
+        std::streampos temp_pos;
+        point3 cen;
+        float r = 1.0f;
+        int material_index = 0;
+        do {
+            std::vector<std::string> maps;
+            temp_pos = is.tellg();
+            std::getline(is, line);
+            maps = get_key_value(line);
+            if (maps[0] == "center") {
+                cen.load_from_string(maps[1]);
+            }
+            else if (maps[0] == "radius") {
+                r = std::stof(maps[1]);
+            }
+            else if (maps[0] == "material") {
+                material_index = std::stoi(maps[1]);
+            }
+        } while (!isupper(line[0]));
+        is.seekg(temp_pos);
+
+        return new sphere(cen, r, materials[material_index]);
+    }
 
 public:
     point3 center;
@@ -53,7 +79,6 @@ __device__ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& 
    
     return true;
 }
-
 
 __forceinline__ __device__ bool sphere::bounding_box(float t0, float t1, aabb& box) const {
 
