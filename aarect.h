@@ -9,18 +9,38 @@ __global__ void xy_rect_gpu(hittable** d_this, material** mat_ptr, float x0, flo
 __global__ void xz_rect_gpu(hittable** d_this, material** mat_ptr, float x0, float x1, float z0, float z1, float k);
 __global__ void yz_rect_gpu(hittable** d_this, material** mat_ptr, float y0, float y1, float z0, float z1, float k);
 
+/**
+ * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XY.
+ */
 class xy_rect : public hittable {
 public:
+    /**
+     * Konstruktor.
+     * 
+     */
     xy_rect() {}
 
+    /**
+     * Konstruktor.
+     * 
+     * \param _x0 Pierwsza wspó³rzêdna w p³aszczyŸnie X
+     * \param _x1 Druga wspó³rzêdna w p³aszczyŸnie X
+     * \param _y0 Pierwsza wspó³rzêdna w p³aszczyŸnie Y
+     * \param _y1 Druga wspó³rzêdna wp³aszczyŸnie Y
+     * \param _k Szerokoœæ prostok¹ta
+     * \param mat Materia³ obiektu
+     * \return 
+     */
     __host__ __device__ xy_rect(float _x0, float _x1, float _y0, float _y1, float _k,
        material* mat)
         : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k) {
         material_ptr = mat;
     };
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
 
+    //! @copydoc hittable::bounding_box(time0,time1,output_box)
     __device__ virtual bool bounding_box(float time0, float time1, aabb& output_box) const override {
         // The bounding box must have non-zero width in each dimension, so pad the Z
         // dimension a small amount.
@@ -28,11 +48,19 @@ public:
         return true;
     }
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(xy_rect*)));
         xy_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, x0, x1, y0, y1, k);
     }
 
+    /**
+     * Wczytywanie obiektu z pliku.
+     * 
+     * \param file Stream do pliku
+     * \param materials Lista materia³ów w scenie
+     * \return Referencje do utworzonego obiektu
+     */
     __host__ static xy_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -73,21 +101,44 @@ public:
 
 
 public:
+    /**
+     * Wspó³rzêdne obektu.
+     */
     float x0, x1, y0, y1, k;
 };
 
+/**
+ * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XZ.
+ */
 class xz_rect : public hittable {
 public:
+    /**
+     * Konstrutor pusty.
+     * 
+     */
     xz_rect() {}
 
+    /**
+     * Konstruktor.
+     * 
+     * \param _x0 Pierwsza wspó³rzêdna w p³aszczyŸnie X
+     * \param _x1 Druga wspó³rzêdna w p³aszczyŸnie X
+     * \param _z0 Pierwsza wspó³rzêdna w p³aszczyŸnie Z
+     * \param _z1 Druga wspó³rzêdna wp³aszczyŸnie Z
+     * \param _k Szerokoœæ prostok¹ta
+     * \param mat Materia³ obiektu
+     * \return 
+     */
     __host__ __device__ xz_rect(float _x0, float _x1, float _z0, float _z1, float _k,
         material* mat)
         : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k) {
         material_ptr = mat;
     };
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
 
+    //! @copydoc hittable::bunding_box(time0, time1, output_box)
     __device__ virtual bool bounding_box(float time0, float time1, aabb& output_box) const override {
         // The bounding box must have non-zero width in each dimension, so pad the Z
         // dimension a small amount.
@@ -95,11 +146,19 @@ public:
         return true;
     }
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(xz_rect*)));
         xz_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, x0, x1, z0, z1, k);
     }
 
+    /**
+     * £adowanie obiektu z pliku.
+     * 
+     * \param file Stream do pliku
+     * \param materials Lista u¿ywanych materia³ów
+     * \return Referencja do utworzonego obiektu
+     */
     __host__ static xz_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -141,9 +200,15 @@ public:
 
 
 public:
+    /**
+     * Wspó³rzêdne obiektu.
+     */
     float x0, x1, z0, z1, k;
 };
 
+/**
+ * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie YZ.
+ */
 class yz_rect : public hittable {
 public:
     yz_rect() {}
@@ -154,8 +219,10 @@ public:
         material_ptr = mat;
     };
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
 
+    //! @copydoc hittable::bounding_box(time0,time1,output_box)
     __device__ virtual bool bounding_box(float time0, float time1, aabb& output_box) const override {
         // The bounding box must have non-zero width in each dimension, so pad the Z
         // dimension a small amount.
@@ -163,11 +230,19 @@ public:
         return true;
     }
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(yz_rect*)));
         yz_rect_gpu << <1, 1 >> > (d_this, material_ptr->d_this, y0, y1, z0, z1, k);
     }
 
+    /**
+     * Wczytanie obiektu z pliku.
+     * 
+     * \param file Stream do pliku
+     * \param materials Lista materia³ów dostêpnych w scenie
+     * \return Referencje do utworzonego obiektu
+     */
     __host__ static yz_rect* load_from_file(std::ifstream& file, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -207,21 +282,60 @@ public:
     }
 
 public:
+    /**
+     * Wspo³rzêdne obiektu.
+     */
     float y0, y1, z0, z1, k;
 };
 
+/**
+ * Tworzenie obiektu \see xy_rect na GPU.
+ * 
+ * \param d_this wskaŸnik do obiektu
+ * \param mat_ptr wskaŸnik na u¿ywany materia³
+ * \param x0 Pierwsza wspó³rzêdna w p³aszczyŸnie X
+ * \param x1 Druga wspó³rzêdna w p³aszczyŸnie X
+ * \param y0 Pirwsza wspó³rzêdna w p³aszczyŸnie Y
+ * \param y1 Druga wspó³rzêdna w p³aszczyŸnie Y
+ * \param k Szerokoœc prostok¹ta
+ * \return 
+ */
 __global__ void xy_rect_gpu(hittable** d_this, material** mat_ptr, float x0, float x1, float y0, float y1, float k) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *d_this = new xy_rect(x0, x1, y0, y1, k, *mat_ptr);
     }
 }
 
+/**
+ * Tworzenie obiektu \see xz_rect na GPU.
+ *
+ * \param d_this wskaŸnik do obiektu
+ * \param mat_ptr wskaŸnik na u¿ywany materia³
+ * \param x0 Pierwsza wspó³rzêdna w p³aszczyŸnie X
+ * \param x1 Druga wspó³rzêdna w p³aszczyŸnie X
+ * \param z0 Pirwsza wspó³rzêdna w p³aszczyŸnie Z
+ * \param z1 Druga wspó³rzêdna w p³aszczyŸnie Z
+ * \param k Szerokoœc prostok¹ta
+ * \return
+ */
 __global__ void xz_rect_gpu(hittable** d_this, material** mat_ptr, float x0, float x1, float z0, float z1, float k) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *d_this = new xz_rect(x0, x1, z0, z1, k, *mat_ptr);
     }
 }
 
+/**
+ * Tworzenie obiektu \see yz_rect na GPU.
+ *
+ * \param d_this wskaŸnik do obiektu
+ * \param mat_ptr wskaŸnik na u¿ywany materia³
+ * \param y0 Pierwsza wspó³rzêdna w p³aszczyŸnie Y
+ * \param y1 Druga wspó³rzêdna w p³aszczyŸnie Y
+ * \param z0 Pirwsza wspó³rzêdna w p³aszczyŸnie Z
+ * \param z1 Druga wspó³rzêdna w p³aszczyŸnie Z
+ * \param k Szerokoœc prostok¹ta
+ * \return
+ */
 __global__ void yz_rect_gpu(hittable** d_this, material** mat_ptr, float y0, float y1, float z0, float z1, float k) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *d_this = new yz_rect(y0, y1, z0, z1, k, *mat_ptr);

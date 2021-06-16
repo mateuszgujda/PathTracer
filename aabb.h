@@ -3,21 +3,73 @@
 #include "commons.h"
 #include <thrust/swap.h>
 
-
+/**
+ * Funkcja min na GPU.
+ * 
+ * \param a pierwsza liczba
+ * \param b druga liczba
+ * \return Liczbe mniejsz¹ 
+ */
 __forceinline__ __device__ float ffmin(float a, float b) { return a < b ? a : b; }
+/**
+ * Funkcja max na GPU.
+ * 
+ * \param a pierwsza liczba
+ * \param b druga liczba
+ * \return Liczbe wiêksz¹
+ */
 __forceinline__ __device__ float ffmax(float a, float b) { return a > b ? a : b; }
 
+/**
+ * Klasa zawieraj¹ca szeœcian otaczaj¹cy dany obiekt.
+ */
 class aabb {
 public:
+    /**
+     * Konstruktor.
+     * 
+     * \return 
+     */
     __device__ aabb() {}
+    /**
+     * Konstruktor.
+     * 
+     * \param a róg szeœcianu
+     * \param b róg szeœcianu po przek¹tnej od a
+     * \return 
+     */
     __device__ aabb(const point3& a, const point3& b) { minimum = a; maximum = b; }
 
-    __device__ point3 min() const { return minimum; }
+    /**
+     * Funkcja min.
+     * 
+     * \return Zwraca najbli¿szy punkt w szeœcianie
+     */
+    __device__ point3 min() const { return minimum;}
+    /**
+     * Funkcja max.
+     * 
+     * \return Zwraca najdalszy punkt w szeœcianie
+     */
     __device__ point3 max() const { return maximum; }
 
+    /**
+     * Funkcja zajmuj¹ca siê trafieniem.
+     * 
+     * \param r promieñ uderzaj¹cy
+     * \param t_min pocz¹tek przedzia³u czasowego
+     * \param t_max koniec przedzia³u czasowego
+     * \return  czy zosta³ trafiony
+     */
     bool aabb::hit(const ray& r, float t_min, float t_max) const;
 
+    /**
+     * Punkt najbli¿szy.
+     */
     point3 minimum;
+    /**
+     * Punkt najdalszy.
+     */
     point3 maximum;
 };
 

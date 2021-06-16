@@ -18,6 +18,13 @@
 #define TBP 512;
 
 
+/// <summary>
+/// Funkcja inicjalizuje rand_state dla każdego piksela w obrazie
+/// </summary>
+/// <param name="max_x">szerokość obrazu</param>
+/// <param name="max_y">wysokość obrazu</param>
+/// <param name="rand_state">wskaźnik do zmiennej</param>
+/// <returns></returns>
 __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -27,6 +34,15 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     curand_init(1984+ pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
+/// <summary>
+/// Główna funkcja zwracająca odpowiedni kolor po uderzeniu promienia 
+/// </summary>
+/// <param name="r">aktualnie liczony promień</param>
+/// <param name="background">kolor tła</param>
+/// <param name="world">Obiekt typu hittable_list zawierający listę obiektów znajdujących się w scenie</param>
+/// <param name="local_rand_state">Zmienna, z której brane są liczby pseudolosowe</param>
+/// <param name="depth">Ilość odbić promienia</param>
+/// <returns>Kolor w miejscu trafionym promieniem po odpowiedniej ilości odbić</returns>
 __device__ color ray_color(const ray& r, const color& background, const hittable** world, curandState* local_rand_state,  int depth) {
     hit_record rec;
 
@@ -50,7 +66,18 @@ __device__ color ray_color(const ray& r, const color& background, const hittable
 
 
 
-
+/// <summary>
+/// Główna kernel zawierający obliczenie wartości koloru każdego piksela w obrazie
+/// </summary>
+/// <param name="fb">tablica pikseli</param>
+/// <param name="max_x">szerokość obrazu</param>
+/// <param name="max_y">wysokość obrazu</param>
+/// <param name="samples_per_pixel">ilość powtarzanych obliczeń dla danego piksela</param>
+/// <param name="background">kolor tła</param>
+/// <param name="camera">obiekt kamery</param>
+/// <param name="world">lista obiektów zawierająca wszystkie obiekty w scenie</param>
+/// <param name="rand_state">lista obiektów niezbędnych do generowania liczb pseudolosowych</param>
+/// <returns></returns>
 __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, color background, camera** camera, hittable** world, curandState* rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -59,7 +86,6 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, co
     int pixel_index = j * max_x + i;
     curandState local_rand_state = rand_state[pixel_index];
     color col = color(0.0f, 0.0f, 0.0f);
-    int blocks = samples_per_pixel / TBP + 1;
     for (int k = 0; k < samples_per_pixel; k++) {
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
@@ -73,20 +99,24 @@ __global__ void render(vec3* fb, int max_x, int max_y, int samples_per_pixel, co
     fb[pixel_index] = col;
 }
 
+/// <summary>
+/// Główna funkcja programu
+/// </summary>
+/// <returns>0 jeśli wszystko zakończyło się poprawnie lub kod błędu jeżeli wystąpił błąd</returns>
 int main() {
     //Image
    // const float aspect_ratio = 16.0f / 9.0f;
     std::ifstream file;
     file.open("scene.txt");
-    float aspect_ratio = 1;
-    int image_width = 600;
+    float aspect_ratio = 1.33f;
+    int image_width = 1200;
     int image_height = static_cast<int>(image_width / aspect_ratio);
     int tx = 8;
     int ty = 8;
     scene* sc;
     int samples_per_pixel = 80;
     if (!file.is_open()) {
-        sc = new scene(2);
+        sc = new scene();
     }
     else {
         std::string line;
@@ -184,7 +214,6 @@ int main() {
     checkCudaErrors(cudaFree(d_rand_state));
     checkCudaErrors(cudaFree(fb));
     delete sc;
-
 
     cudaDeviceReset();
     return 0;

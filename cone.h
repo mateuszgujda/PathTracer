@@ -4,19 +4,44 @@
 
 __global__ void cone_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius);
 
+/**
+ * Klasa zawieraj¹ca informacjê o obiektach sto¿kowych.
+ */
 class cone : public hittable {
 public:
+    /**
+     * Konstruktor.
+     * 
+     * \return 
+     */
     __device__ __host__ cone() {}
+    /**
+     * Konstruktor.
+     * 
+     * \param center Œrodek podstawy sto¿ka
+     * \param height Wysokoœæ sto¿ka
+     * \param radius Promieñ podstawy sto¿ka
+     * \param m Matera³ u¿ywany w obiekcie
+     * \return 
+     */
     __device__ __host__ cone(point3 center, float height, float radius, material* m) : center(center), radius(radius), height(height) {
         this->material_ptr = m;
         this->tangens = (radius / height) * (radius / height);
     };
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(cone*)));
         cone_gpu << <1, 1 >> > (d_this, material_ptr->d_this, center, height, radius);
     }
 
+    /**
+     * Inicjalizacja z pliku.
+     * 
+     * \param is Stream do pliku
+     * \param materials Lista materia³ów w scenie
+     * \return Referencja do stworzonego obiektu
+     */
     __host__ static cone* init_from_file(std::ifstream& is, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -48,13 +73,27 @@ public:
         return new cone(cen, height, r, materials[material_index]);
     }
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
+    //! @copydoc hittable::bounding_box(t0,t1,box)
     __device__ virtual bool bounding_box(float t0, float t1, aabb& box) const override;
 
 public:
+    /**
+     * Œrodek podstawy sto¿ka.
+     */
     point3 center;
+    /**
+     * Wysokoœæ sto¿ka.
+     */
     float height;
+    /**
+     * Promieñ sto¿ka.
+     */
     float radius;
+    /**
+     * Tangens k¹tu sto¿ka.
+     */
     float tangens;
 };
 
@@ -108,7 +147,16 @@ __forceinline__ __device__ bool cone::bounding_box(float t0, float t1, aabb& box
 
 
 
-
+/**
+ * Tworzenie \see cone na GPU.
+ * 
+ * \param obj_ptr WskaŸnik na obiekt
+ * \param mat_ptr WskaŸnik na materia³
+ * \param center Œrodek podstawy sto¿ka
+ * \param height Wysokoœæ sto¿ka
+ * \param radius Promieñ sto¿ka
+ * \return 
+ */
 __global__ void cone_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *obj_ptr = new cone(center, height, radius, *mat_ptr);

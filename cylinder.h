@@ -4,18 +4,43 @@
 
 __global__ void cylinder_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius);
 
+/**
+ * Klasa opisuj¹ca cylinder.
+ */
 class cylinder2 : public hittable {
 public:
+    /**
+     * Konstruktor.
+     * 
+     * \return 
+     */
     __device__ __host__ cylinder2() {}
+    /**
+     * Konstruktor parametryzowany.
+     * 
+     * \param center Œrodek dolnej podstawy konstruktora
+     * \param height Wysokoœc cylindra
+     * \param radius Promieñ podstaw cylindra
+     * \param m Materia³ obiektu
+     * \return 
+     */
     __device__ __host__ cylinder2(point3 center, float height, float radius, material* m) : center(center), radius(radius), height(height) {
         this->material_ptr = m;
     };
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(cylinder2*)));
         cylinder_gpu << <1, 1 >> > (d_this, material_ptr->d_this, center,height, radius);
     }
 
+    /**
+     * Tworzene obiektu z pliku.
+     * 
+     * \param is stream do pliku
+     * \param materials lista dostêpnych w scenie materia³ów
+     * \return Referencje do utworzonego obieku
+     */
     __host__ static cylinder2* init_from_file(std::ifstream& is, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -47,12 +72,23 @@ public:
         return new cylinder2(cen, height, r, materials[material_index]);
     }
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
+    //! @copydoc hittable::bounding_box(t0,t1,box)
     __device__ virtual bool bounding_box(float t0, float t1, aabb& box) const override;
 
 public:
+    /**
+     * Œrodek dolnej podstawy cylindra.
+     */
     point3 center;
+    /**
+     * Wysokoœæ cylindra.
+     */
     float height;
+    /**
+     * Promieñ podstaw cylindra.
+     */
     float radius;
 };
 
@@ -102,7 +138,16 @@ __forceinline__ __device__ bool cylinder2::bounding_box(float t0, float t1, aabb
 
 
 
-
+/**
+ * Tworzenie obiektu \see cylinder2 na GPU.
+ * 
+ * \param obj_ptr WskaŸnik na obiekt
+ * \param mat_ptr WskaŸnik na materia³
+ * \param center Œrodek dolnej podstawy cylindra
+ * \param height Wysokoœæ cylindra
+ * \param radius Promieñ podstaw cylindra
+ * \return 
+ */
 __global__ void cylinder_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *obj_ptr = new cylinder2(center, height, radius, *mat_ptr);

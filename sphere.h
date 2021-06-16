@@ -7,21 +7,44 @@
 
 __global__ void sphere_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float radius);
 
+//! Klasa obiektu typu kula
 class sphere : public hittable {
 public:
+
+    /**
+     * Konstruktor pusty.
+     * 
+     */
     __device__ __host__ sphere() {}
+    /**
+     * Konstruktor klasy.
+     * 
+     * \param cen Po³o¿enie centrum kuli
+     * \param r Wielkoœc promienia
+     * \param m Materia³ kuli
+     */
     __device__ __host__ sphere(point3 cen, float r, material* m) : center(cen), radius(r) {
         this->material_ptr = m;
     };
 
+    //! @copydoc hittable::create_hittable_on_gpu()
     __host__ virtual void create_hittable_on_gpu() override {
         checkCudaErrors(cudaMalloc(&d_this, sizeof(sphere*)));
         sphere_gpu << <1, 1 >> > (d_this, material_ptr->d_this, center, radius);
     }
 
+    //! @copydoc hittable::hit(r,t_min,t_max,rec)
     __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const override;
+    //! @copydoc hittable::bounding_box(t0,t1,box)
     __device__ virtual bool bounding_box(float t0, float t1, aabb& box) const override;
 
+    /**
+     * Inicjalizacja obiektu z pliku.
+     * 
+     * \param is Stream do pliku
+     * \param materials Lista dostêpnych materia³ów w scenie
+     * \return Referencja do utworzonego obiektu
+     */
     __host__ static sphere* init_from_file(std::ifstream& is, std::vector<material*>& materials) {
         std::string line;
         std::streampos temp_pos;
@@ -49,7 +72,13 @@ public:
     }
 
 public:
+    /**
+     * Parametr opisuj¹cy œrodek kuli.
+     */
     point3 center;
+    /**
+     * Promieñ kuli.
+     */
     float radius;
 };
 
@@ -89,7 +118,15 @@ __forceinline__ __device__ bool sphere::bounding_box(float t0, float t1, aabb& b
 
 
 
-
+/**
+ * Tworzenie obiektu \see sphere na GPU.
+ * 
+ * \param obj_ptr wskaŸnik na obiekt
+ * \param mat_ptr wskaŸnik na materia³
+ * \param center œrodek kuli w przestrzeni 3D
+ * \param radius promieñ kuli
+ * \return 
+ */
 __global__ void sphere_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float radius) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         *obj_ptr = new sphere(center, radius, *mat_ptr);
