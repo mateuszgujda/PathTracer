@@ -7,6 +7,7 @@ __global__ void hittable_list_gpu(hittable** d_world, hittable** d_list, int lis
 __global__ void copy_hittable_to_list_gpu(hittable** d_obj, hittable** d_list, int index);
 __global__ void free_hittable_list_gpu(hittable** d_list);
 
+//! Klasa zawieraj¹ca listê obiektów, które mog¹ wystêpowaæ w scene.
 /**
  * Klasa zawieraj¹ca listê obiektów, które mog¹ wystêpowaæ w scene.
  */

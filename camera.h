@@ -7,6 +7,7 @@ class camera;
 __global__ void free_camera_gpu(camera** d_camera);
 __global__ void camera_gpu(camera** d_camera, vec3 w, vec3 u, vec3 v, point3 origin, vec3 horizontal, vec3 vertical, point3 lower_lef_corner, float lens_radius);
 
+//! Klasa zawieraj¹ca informacje o kamerze w scenie.
 /**
  * Klasa zawieraj¹ca informacje o kamerze w scenie.
  */

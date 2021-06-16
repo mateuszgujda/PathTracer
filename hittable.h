@@ -8,6 +8,7 @@
 
 class material;
 class hittable;
+//! Struktura zawieraj¹ca dane o uderzeniu promienia.
 /**
  * Struktura zawieraj¹ca dane o uderzeniu promienia.
  */
@@ -33,6 +34,7 @@ struct hit_record {
 
 __global__ void free_hittable_gpu(hittable** d_this);
 
+//! Klasa opisuj¹ca obiekty które mog¹ byæ po³o¿one w scenie.
 /**
  * Klasa opisuj¹ca obiekty które mog¹ byæ po³o¿one w scenie.
  */

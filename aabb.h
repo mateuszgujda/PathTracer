@@ -20,6 +20,7 @@ __forceinline__ __device__ float ffmin(float a, float b) { return a < b ? a : b;
  */
 __forceinline__ __device__ float ffmax(float a, float b) { return a > b ? a : b; }
 
+//! Klasa zawieraj¹ca szeœcian otaczaj¹cy dany obiekt.
 /**
  * Klasa zawieraj¹ca szeœcian otaczaj¹cy dany obiekt.
  */

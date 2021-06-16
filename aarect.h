@@ -9,6 +9,7 @@ __global__ void xy_rect_gpu(hittable** d_this, material** mat_ptr, float x0, flo
 __global__ void xz_rect_gpu(hittable** d_this, material** mat_ptr, float x0, float x1, float z0, float z1, float k);
 __global__ void yz_rect_gpu(hittable** d_this, material** mat_ptr, float y0, float y1, float z0, float z1, float k);
 
+//! Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XY.
 /**
  * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XY.
  */
@@ -107,6 +108,7 @@ public:
     float x0, x1, y0, y1, k;
 };
 
+//! Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XZ.
 /**
  * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie XZ.
  */
@@ -206,6 +208,7 @@ public:
     float x0, x1, z0, z1, k;
 };
 
+//! Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie YZ.
 /**
  * Klasa zawieraj¹ca informacje o prostok¹cie w p³aszczyŸnie YZ.
  */

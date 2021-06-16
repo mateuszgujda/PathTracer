@@ -4,6 +4,7 @@
 #include <math.h>
 #include <iostream>
 
+//! Klasa reprezentująca wektor, kolor lub punkt w przestrzeni 3D.
 /**
  * Klasa reprezentująca wektor, kolor lub punkt w przestrzeni 3D.
  */

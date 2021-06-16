@@ -4,6 +4,7 @@
 
 __global__ void cylinder_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius);
 
+//! Klasa opisuj¹ca cylinder.
 /**
  * Klasa opisuj¹ca cylinder.
  */

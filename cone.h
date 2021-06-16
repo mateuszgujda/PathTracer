@@ -4,6 +4,7 @@
 
 __global__ void cone_gpu(hittable** obj_ptr, material** mat_ptr, point3 center, float height, float radius);
 
+//! Klasa zawieraj¹ca informacjê o obiektach sto¿kowych.
 /**
  * Klasa zawieraj¹ca informacjê o obiektach sto¿kowych.
  */

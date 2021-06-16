@@ -16,6 +16,7 @@ __global__ void metal_gpu(material** mat_ptr, color albedo, float fuzz);
 __global__ void dielectric_gpu(material** mat_ptr, float ior);
 __global__ void diffuse_light_gpu(material** mat_ptr, color albedo);
 __global__ void delete_material_gpu(material** mat_ptr);
+//! Podstawowa klasa materia³u, któr¹ powinny rozszerzaæ inne materia³y.
 /**
 * Podstawowa klasa materia³u, któr¹ powinny rozszerzaæ inne materia³y.
 */
@@ -72,6 +73,7 @@ class material {
     material** d_this = NULL;
 };
 
+//! Klasa materia³ów o sta³ym kolorze.
 /**
  * Klasa materia³ów o sta³ym kolorze.
  */
@@ -132,6 +134,7 @@ class lambertian : public material {
         color albedo;
 };
 
+//! Klasa materia³ów odbijaj¹cych.
 /**
  * Klasa materia³ów odbijaj¹cych.
  */
@@ -202,7 +205,7 @@ public:
     float fuzz;
 };
 
-
+//!  Klasa materi³ów przeŸroczystych.
 /**
  * Klasa materi³ów przeŸroczystych.
  */
@@ -274,6 +277,7 @@ public:
     float ir; 
 };
 
+//! Klasa materia³ów emituj¹cych œwiat³o.
 /**
  * Klasa materia³ów emituj¹cych œwiat³o.
  */
